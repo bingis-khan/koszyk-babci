@@ -15,11 +15,11 @@ $hook_hook = 2.5;
 $hook_connector_height = 3;
 $cut_height = ($basket_height - 5*$thickness) / 3;
 
-$front_small_num_holes = 2;
-$front_small_length = $front_small_num_holes*($cut_height + $thickness) + .5 * $thickness;
-$middle_front_length = $width - 2*($front_small_length + $thickness);  // add thickness, because for some reason it's offset by thickness.
-echo($front_small_length);
-echo($middle_front_length);
+$front_small_num_holes = 3;
+$front_right_length = $width/2 - $thickness;
+$front_left_length = $width/2 - $thickness;
+echo($front_right_length);
+echo($front_left_length);
 
 
 $fn = 64;
@@ -99,30 +99,31 @@ module wall() {
             base();
                         
             translate([$thickness * .5, $thickness * .5, 0]) {
-                square([$basket_depth - 1*$thickness, $basket_height + 2]);
+                square([$basket_depth - 1.5*$thickness, $basket_height + 2]);
             }
-        }
+            
+            translate([$basket_depth - .5*$thickness, -.5*$thickness, 0]) {
+                square([$thickness*.5, $basket_height + 5]);
+            }
+            
+            translate([0, $basket_height - 1, 0]) {
+                square([$basket_depth, $thickness*2]);
+            }
+        }      
     }
-        
 }
 
-wall();
-
-module front_small() {
+cut_off = .5;
+module wall_general() {
     difference() {
-        linear_extrude($front_small_length) {
+        linear_extrude($front_right_length) {
             offset(smoothing)offset(-smoothing) square([$thickness, $basket_depth]);
+            
+            translate([.5*$thickness, $basket_depth - $thickness, 0]) square([.5, 1]);
             
             translate([.5, 0, 0]) square([1, .5]);
         }
-
-
-        // vertical cut
-        cut_off = .5;
-        translate([-cut_off, -cut_off, -cut_off]) cube([.5 + cut_off, $basket_depth + 2*cut_off, .5 + cut_off]);
-        
-        // horizontal cut
-        translate([.5 - cut_off/2, -cut_off, -cut_off]) cube([69, .5 + cut_off, .5 + cut_off]);
+       
         
         // 2nd vertical cut for that z-fighting thing
         translate([1, 0, 0]) cube([.5, 3, .5]);
@@ -131,26 +132,101 @@ module front_small() {
         translate([2, 2, .5 * $thickness]) rotate([0, -90, 0]) linear_extrude(4) {
             offset(-smoothing)offset(2*smoothing)offset(-smoothing) {
                 for (i=[0:1:$front_small_num_holes - 1]) {
-                    translate([i * ($cut_height + $thickness), 0, 0]) square([$cut_height, $basket_height - 3*$thickness]);
+                    translate([.5 * $thickness + i * ($cut_height + $thickness), 0, 0]) square([$cut_height, $basket_height - 3*$thickness]);
                 }
             }
-        }
-        
-        // last ridge
-        translate([.5 * $thickness, .5 * $thickness, $front_small_length - .5 * $thickness]) linear_extrude(1) {
-            square([1*$thickness, $basket_height - 1.5*$thickness]);
         }
     }
 
 }
 
-module back_small() {
-    front_small();
-    translate([0, $basket_height - $thickness, 0]) cube([1, 1, $front_small_length]);
+module front_general() {
+    scale([-1, 1, 1]) difference() {
+        wall_general();
+
+        
+        translate([cut_off, -cut_off, -cut_off]) cube([.5 + cut_off, $basket_depth - .5*$thickness, .5 + cut_off]);
+        
+        // horizontal cut
+        translate([$thickness - cut_off/2, -cut_off, -cut_off]) cube([69, .5 + cut_off, .5 + cut_off]);
+    }        
 }
 
-translate([0, 0, 1]) back_small();
 
+module back_general() {
+    difference() {
+        wall_general();
+
+        // horizontal ridge.
+        translate([-cut_off, -cut_off, -cut_off]) cube([.5 + cut_off, $basket_depth + 2*cut_off, .5 + cut_off]);
+        
+        // horizontal cut
+        translate([.5 - cut_off/2, -cut_off, -cut_off]) cube([69, .5 + cut_off, .5 + cut_off]);
+    }
+    translate([0, $basket_height - $thickness, 0]) cube([1, 1, $front_right_length]);
+}
+
+module front_right() {
+    difference() {
+        front_general();
+    
+        // last ridge
+        scale([-1, 1, 1]) translate([.5 * $thickness, .5 * $thickness, $front_right_length - .5 * $thickness]) linear_extrude(1) {
+            square([1*$thickness, $basket_height - 1.5*$thickness]);
+        }    
+    }
+}
+
+module back_right() {
+    difference() {
+        back_general();
+        
+        // last ridge
+        translate([.5 * $thickness, .5 * $thickness, $front_right_length - .5 * $thickness]) linear_extrude(1) {
+            square([1*$thickness, $basket_height - 1.5*$thickness]);
+        } 
+    }
+}
+
+
+module front_left() {
+    scale([1, 1, -1]) {
+        front_general();
+        
+        // last ridge
+        translate([-1 * $thickness, .5 * $thickness, $front_right_length - .5 * $thickness]) linear_extrude($thickness) {
+            square([.5*$thickness, $basket_height - 1.5*$thickness]);
+        }
+    }
+}
+
+module back_left() {
+    scale([1, 1, -1]) {
+        back_general();
+    
+         // last ridge
+        translate([.5 * $thickness, .5 * $thickness, $front_right_length - .5 * $thickness]) linear_extrude($thickness) {
+            square([.5*$thickness, $basket_height - 1.5*$thickness]);
+        }
+    }
+}
+
+
+module new_basket() {
+    rotate([90, 0, 0]) {
+        wall();
+        
+        translate([0, 0, $thickness]) back_right();
+        translate([0, 0, $width - $thickness]) back_left();
+        
+        translate([0, 0, $width]) scale([1, 1, -1]) wall();
+        
+        translate([$basket_depth, 0, $thickness]) front_right();
+        translate([$basket_depth, 0, $width - $thickness]) front_left();
+    }
+}
+
+ new_basket();
         
 
 module dingus() {
@@ -181,10 +257,10 @@ module hook() {
     
     dingus();
 }
-translate([0, $basket_depth - $thickness, $basket_height]) {
-    hook();
-    
-    translate([$width - $thickness, 0, 0]) {
-        hook();
-    }
-}
+//translate([0, $basket_depth - $thickness, $basket_height]) {
+//    hook();
+//    
+//    translate([$width - $thickness, 0, 0]) {
+//        hook();
+//    }
+//}
