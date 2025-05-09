@@ -264,7 +264,7 @@ module left_wall() {
     scale([1, 1, -1]) wall();
 }
 
-// BOB_SCAD_PRINT left_wall right_wall back_right back_left front_right front_left floor floor
+// BOB_SCAD_PRINT left_wall right_wall back_right back_left front_right front_left floor hook
 module new_basket() {
     rotate([90, 0, 0]) {
         right_wall();
