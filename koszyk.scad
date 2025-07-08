@@ -7,17 +7,18 @@ module rcube(size) {
 // NOTES FOR THE FUTURE: I can just redefine translate to use thickness. I ended up using thickness everywhere anyway. same with other common functions? but this might be annoying and less obvious.
 
 
-width = 30;
+width = 43;
 basket_height = 15;
 basket_depth = 15;
-holder_height = 12;
+holder_height = 14;
 hook_depth = 4;
 thickness = 1;
-hook_hook = 2.5;
+hook_hook = 5;
 hook_connector_height = 3;
 cut_height = (basket_height - 5*thickness) / 3;
+hook_thickness = 3;
 
-front_small_num_holes = 3;
+front_small_num_holes = 4;
 front_right_length = width/2 - thickness;
 front_left_length = width/2 - thickness;
 echo(front_right_length);
@@ -75,45 +76,50 @@ module base() {
 
 // lr wall
 module wall() {
-    difference() {
-        linear_extrude(thickness) {
-            offset(-smoothing)offset(2*smoothing)offset(-smoothing) difference() {
-                square([basket_depth, basket_height]);
-                
-                translate([thickness, 2*thickness, 0]) {
-                    for (i=[0:cut_height+thickness:basket_height]) {
-                        translate([.5*thickness, i - .5*thickness, 0]) square([basket_depth - 3*thickness, cut_height]);
+    difference () {
+        translate([0, 0, 0]) {
+            difference() {
+                linear_extrude(thickness) {
+                    offset(-smoothing)offset(2*smoothing)offset(-smoothing) difference() {
+                        square([basket_depth, basket_height]);
+                        
+                        translate([thickness, 2*thickness, 0]) {
+                            for (i=[0:cut_height+thickness:basket_height]) {
+                                translate([.5*thickness, i - .5*thickness, 0]) square([basket_depth - 3*thickness, cut_height]);
+                            }
+                            
+                            // NOTE: accidental good looking thing. now, there's a "ridge on the left-right walls. It was not in the design, but it accidentally got created after a change. I'll leave it and ask my gramma if she likes it.
+                        }
                     }
                     
-                    // NOTE: accidental good looking thing. now, there's a "ridge on the left-right walls. It was not in the design, but it accidentally got created after a change. I'll leave it and ask my gramma if she likes it.
+                    translate([0, basket_height - thickness, 0]) square(thickness);
                 }
+
             }
             
-            translate([0, basket_height - thickness, 0]) square(thickness);
+                
+            translate([0, 0, thickness]) linear_extrude(thickness*.5) {
+                difference() {
+                    base();
+                                
+                    translate([thickness * .5, thickness * .5, 0]) {
+                        square([basket_depth - 1.5*thickness, basket_height + 2]);
+                    }
+                    
+                    translate([basket_depth - .5*thickness, -.5*thickness, 0]) {
+                        square([thickness*.5, basket_height + 5]);
+                    }
+                    
+                    translate([0, basket_height - 1, 0]) {
+                        square([basket_depth, thickness*2]);
+                    }
+                }      
+            }
         }
-        
-        // bad dingus hole.
-        translate([thickness + (thickness/12)*1.2, basket_height + hook_connector_height, thickness + (thickness/12)*1.2]) 
-            rotate([-90, 90, 0]) scale([1.2, 1.2, 2]) dingus();
-    }
-    
-        
-    translate([0, 0, thickness]) linear_extrude(thickness*.5) {
-        difference() {
-            base();
                         
-            translate([thickness * .5, thickness * .5, 0]) {
-                square([basket_depth - 1.5*thickness, basket_height + 2]);
-            }
-            
-            translate([basket_depth - .5*thickness, -.5*thickness, 0]) {
-                square([thickness*.5, basket_height + 5]);
-            }
-            
-            translate([0, basket_height - 1, 0]) {
-                square([basket_depth, thickness*2]);
-            }
-        }      
+        // bad dingus hole.
+        translate([thickness + (thickness/10) - (thickness/50), basket_height + hook_connector_height - 3*thickness + thickness * .27, -(thickness/20)]) 
+            rotate([-90, 90, 0]) scale([1.1, 1.1, 1.1]) scale([-1, 1, 1]) hook();
     }
 }
 
@@ -136,7 +142,7 @@ module wall_general() {
         translate([2, 2, .5 * thickness]) rotate([0, -90, 0]) linear_extrude(4) {
             offset(-smoothing)offset(2*smoothing)offset(-smoothing) {
                 for (i=[0:1:front_small_num_holes - 1]) {
-                    translate([.5 * thickness + i * (cut_height + thickness), -.5*thickness, 0]) square([cut_height, basket_height - 3*thickness]);
+                    translate([2 * thickness + i * (cut_height + thickness), -.5*thickness, 0]) square([cut_height, basket_height - 3*thickness]);
                 }
             }
         }
@@ -159,15 +165,24 @@ module front_general() {
 
 module back_general() {
     difference() {
-        wall_general();
+        translate([0, 0, 0]) {
+            difference() {
+                wall_general();
 
-        // horizontal ridge.
-        translate([-cut_off, -cut_off, -cut_off]) cube([.5 + cut_off, basket_depth + 2*cut_off, .5 + cut_off]);
+                // horizontal ridge.
+                translate([-cut_off, -cut_off, -cut_off]) cube([.5 + cut_off, basket_depth + 2*cut_off, .5 + cut_off]);
+                
+                // horizontal cut
+                translate([.5 - cut_off/2, -cut_off, -cut_off]) cube([69, .5 + cut_off, .5 + cut_off]);
+            }
+
+            translate([0, basket_height - thickness, 0]) cube([1, 1, front_right_length]);
+        }
         
-        // horizontal cut
-        translate([.5 - cut_off/2, -cut_off, -cut_off]) cube([69, .5 + cut_off, .5 + cut_off]);
+        // bad dingus hole. (copy)
+        translate([thickness + (thickness/10) - (thickness/50), basket_height + hook_connector_height - 3*thickness + thickness * .27, -1.2*thickness -(thickness/20)]) 
+            rotate([-90, 90, 0]) scale([1.1, 1.1, 1.1]) scale([-1, 1, 1]) hook();
     }
-    translate([0, basket_height - thickness, 0]) cube([1, 1, front_right_length]);
 }
 
 module front_right() {
@@ -228,10 +243,22 @@ module floor() {
 
 
 module dingus() {
-    translate([thickness/2, thickness/2, 0]) rotate([180, 0, 0]) {
+    dingus_height = 3;
+    rotate([180, 0, 0]) translate([0, -thickness*1, 0]) {
         difference() {
-            cylinder(hook_connector_height, thickness/3, thickness/3);
-            translate([-thickness/2, -(1.2 * thickness), 0]) cube([thickness, thickness, hook_connector_height + 1]);
+            translate([0, 0, 0]) {
+                linear_extrude(dingus_height*thickness) {
+                    square([hook_thickness, .5*thickness]);
+                }
+                rotate([180, 0, 180]) translate([-hook_thickness, 0, -dingus_height]) linear_extrude(1*thickness) {
+                    square([hook_thickness, .8*thickness]);
+                    translate([hook_thickness, 0]) rotate([0, 180, 0]) square([.8*thickness, 1*thickness]);
+                }
+            }
+            
+            translate([-.3, -.1, 0]) linear_extrude(dingus_height*thickness + 2) {
+                square([.5, (1 + .5)*thickness]);
+            }
         }
     }
 }
@@ -240,7 +267,7 @@ module dingus() {
 module hook() {
     translate([0, 0, holder_height])
     rotate([0, 90, 0])
-    linear_extrude(thickness) {
+    linear_extrude(hook_thickness) {
         offset(outer_hook_fillet)offset(-outer_hook_fillet)
         offset(-inner_hook_fillet)offset(inner_hook_fillet)
         {  
@@ -250,10 +277,11 @@ module hook() {
                 square([hook_hook, thickness]);
             }
         }
+               
         translate([holder_height - 1, 0, 0]) square(thickness);
     }
     
-    dingus();
+    dingus();   
 }
 
 module right_wall() {
@@ -286,7 +314,7 @@ module new_basket() {
     translate([thickness, -width, basket_height]) rotate([0, 0, 90]) {
         hook();
         
-        translate([width - thickness, 0, 0]) {
+        translate([width, 0, 0]) scale([-1, 1, 1]) {
             hook();
         }
     }
